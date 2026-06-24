@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phenix Salon Suites — Corporate Divestiture Dashboard</title>
+<style>
+  :root {
+    --navy: #1B3A6B; --navy-dark: #0F2444; --gold: #C9A96E; --gold-light: #E8D4A8;
+    --white: #FFFFFF; --lt-bg: #F8F8F8; --mid-gr: #666666; --dark: #1A1A1A;
+    --cream: #F8F0E0; --border: #E0E0E0;
+    --selected-bg: #EBF3FB; --selected-border: #1B3A6B;
+    --ca-bg: #EBF3FB; --ca-border: #1B3A6B;
+    --az-bg: #EBF3FB; --az-border: #1B3A6B;
+    --tx-bg: #EBF3FB; --tx-border: #1B3A6B;
+    --nc-bg: #EBF3FB; --nc-border: #1B3A6B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--lt-bg); color: var(--dark); font-size: 13px; }
+
+  .header { background: var(--navy); color: white; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-logo { width: 36px; height: 36px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; color: var(--navy); flex-shrink: 0; }
+  .header-sub { font-size: 11px; opacity: 0.8; margin-top: 2px; color: var(--gold-light); }
+  .header-date { font-size: 11px; opacity: 0.7; }
+
+  .stats-bar { background: var(--navy-dark); color: white; display: flex; gap: 0; overflow-x: auto; }
+  .stat-item { flex: 1; min-width: 120px; padding: 10px 20px; border-right: 1px solid rgba(255,255,255,0.15); text-align: center; }
+  .stat-item:last-child { border-right: none; }
+  .stat-val { font-size: 18px; font-weight: 700; color: var(--gold); }
+  .stat-lbl { font-size: 10px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+  .layout { display: flex; min-height: calc(100vh - 108px); }
+  .main { flex: 1; padding: 20px 24px; overflow: auto; }
+  .sidebar { width: 320px; background: white; border-left: 1px solid var(--border); padding: 20px; position: sticky; top: 108px; height: calc(100vh - 108px); overflow-y: auto; flex-shrink: 0; }
+
+  .filter-row { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-label { font-size: 11px; color: var(--mid-gr); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .filter-btn { padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: white; cursor: pointer; font-size: 12px; color: var(--dark); transition: all 0.15s; font-family: inherit; }
+  .filter-btn:hover { border-color: var(--gold); color: var(--navy); }
+  .filter-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+  .filter-btn.ca-btn.active { background: var(--ca-border); border-color: var(--ca-border); }
+  .filter-btn.az-btn.active { background: var(--az-border); border-color: var(--az-border); }
+  .filter-btn.tx-btn.active { background: var(--tx-border); border-color: var(--tx-border); }
+  .filter-btn.nc-btn.active { background: var(--nc-border); border-color: var(--nc-border); }
+
+  .region-section { margin-bottom: 24px; }
+  .region-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--navy); }
+  .region-title { font-size: 14px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.5px; }
+  .region-ask { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--navy); }
+  .region-ask span { color: var(--mid-gr); font-weight: 400; font-size: 11px; }
+  .region-ca .region-header { border-bottom-color: var(--ca-border); }
+  .region-ca .region-title, .region-ca .region-ask { color: var(--ca-border); }
+  .region-az .region-header { border-bottom-color: var(--az-border); }
+  .region-az .region-title, .region-az .region-ask { color: var(--az-border); }
+  .region-tx .region-header { border-bottom-color: var(--tx-border); }
+  .region-tx .region-title, .region-tx .region-ask { color: var(--tx-border); }
+  .region-nc .region-header { border-bottom-color: var(--nc-border); }
+  .region-nc .region-title, .region-nc .region-ask { color: var(--nc-border); }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(218px, 1fr)); gap: 10px; }
+
+  .card { background: white; border: 1.5px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.15s; position: relative; user-select: none; }
+  .card:hover { border-color: var(--gold); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .card.selected { border-color: var(--gold); background: var(--selected-bg); box-shadow: 0 0 0 2px var(--gold); }
+  .card.ca-card { border-color: #c0c8e8; } .card.ca-card.selected { border-color: var(--ca-border); box-shadow: 0 0 0 2px var(--ca-border); background: var(--ca-bg); }
+  .card.az-card { border-color: #e8c8a0; } .card.az-card.selected { border-color: var(--az-border); box-shadow: 0 0 0 2px var(--az-border); background: var(--az-bg); }
+  .card.tx-card { border-color: #a0d8b8; } .card.tx-card.selected { border-color: var(--tx-border); box-shadow: 0 0 0 2px var(--tx-border); background: var(--tx-bg); }
+  .card.nc-card { border-color: #d8a0d8; } .card.nc-card.selected { border-color: var(--nc-border); box-shadow: 0 0 0 2px var(--nc-border); background: var(--nc-bg); }
+
+  .card-check { position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; background: white; transition: all 0.15s; }
+  .card.selected .card-check { background: var(--gold); border-color: var(--gold); }
+  .card.selected .card-check::after { content: '✓'; }
+
+  .card-location { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 2px; padding-right: 24px; }
+  .card-state-badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 3px; background: var(--navy); color: white; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .ca-card .card-state-badge { background: var(--ca-border); }
+  .az-card .card-state-badge { background: var(--az-border); }
+  .tx-card .card-state-badge { background: var(--tx-border); }
+  .nc-card .card-state-badge { background: var(--nc-border); }
+
+  .card-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 4px; margin-bottom: 10px; }
+  .metric-val { font-size: 13px; font-weight: 700; color: var(--dark); }
+  .metric-lbl { font-size: 9px; color: var(--mid-gr); text-transform: uppercase; letter-spacing: 0.3px; }
+  .metric-val.negative { color: #c0392b; }
+  .metric-val.positive { color: #27ae60; }
+
+  .occ-bar-wrap { margin-top: 6px; }
+  .occ-bar-label { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .occ-bar-label span { font-size: 9px; color: var(--mid-gr); }
+  .occ-bar-label strong { font-size: 10px; color: var(--dark); }
+  .occ-bar-bg { background: #eee; border-radius: 3px; height: 5px; }
+  .occ-bar-fill { height: 5px; border-radius: 3px; background: var(--gold); transition: width 0.3s; }
+  .occ-bar-fill.low { background: #e67e22; }
+  .occ-bar-fill.very-low { background: #c0392b; }
+
+  .card-price { display: flex; justify-content: space-between; align-items: center; background: var(--lt-bg); border-radius: 5px; padding: 6px 8px; margin-top: 8px; }
+  .price-label { font-size: 9px; color: var(--mid-gr); text-transform: uppercase; letter-spacing: 0.3px; }
+  .price-val { font-size: 14px; font-weight: 800; color: var(--navy); }
+  .ca-card .price-val { color: var(--ca-border); }
+  .az-card .price-val { color: var(--az-border); }
+  .tx-card .price-val { color: var(--tx-border); }
+  .nc-card .price-val { color: var(--nc-border); }
+  .price-tbd { font-size: 11px; font-weight: 600; color: var(--mid-gr); font-style: italic; }
+  .price-neg { font-size: 11px; font-weight: 600; color: #c0392b; font-style: italic; }
+
+  .note-badge { display: inline-block; font-size: 9px; background: var(--gold-light); color: var(--navy-dark); border-radius: 3px; padding: 1px 5px; font-weight: 600; margin-top: 4px; }
+  .note-badge.az { background: #ffe4cc; color: var(--az-border); }
+  .note-badge.tx { background: #c8f0d8; color: var(--tx-border); }
+  .note-badge.nc { background: #f0c8f0; color: var(--nc-border); }
+
+  .sidebar-title { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .sidebar-sub { font-size: 11px; color: var(--mid-gr); margin-bottom: 16px; }
+  .package-empty { text-align: center; padding: 32px 0; color: var(--mid-gr); font-size: 12px; line-height: 1.7; }
+  .package-empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+  .package-totals { background: var(--lt-bg); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+  .pkg-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+  .pkg-row-label { font-size: 11px; color: var(--mid-gr); }
+  .pkg-row-val { font-size: 12px; font-weight: 700; }
+  .pkg-price-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 2px; border-top: 1.5px solid var(--border); margin-top: 6px; }
+  .pkg-price-label { font-size: 12px; font-weight: 600; color: var(--dark); }
+  .pkg-price-val { font-size: 20px; font-weight: 800; color: var(--navy); }
+
+  .selected-list { margin-bottom: 14px; }
+  .selected-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; background: var(--selected-bg); border: 1px solid var(--gold-light); border-radius: 6px; margin-bottom: 6px; }
+  .selected-item.ca-item { background: var(--ca-bg); border-color: #c0c8e8; }
+  .selected-item.az-item { background: var(--az-bg); border-color: #e8c8a0; }
+  .selected-item.tx-item { background: var(--tx-bg); border-color: #a0d8b8; }
+  .selected-item.nc-item { background: var(--nc-bg); border-color: #d8a0d8; }
+  .sel-name { font-size: 12px; font-weight: 600; }
+  .sel-state { font-size: 10px; color: var(--mid-gr); }
+  .sel-price { font-size: 12px; font-weight: 700; color: var(--navy); }
+  .sel-remove { background: none; border: none; color: var(--mid-gr); cursor: pointer; font-size: 14px; padding: 0 4px; margin-left: 6px; border-radius: 3px; line-height: 1; font-family: inherit; }
+  .sel-remove:hover { color: var(--navy); background: rgba(27,58,107,0.1); }
+
+  .btn-export { width: 100%; background: var(--navy); color: white; border: none; border-radius: 6px; padding: 11px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; margin-bottom: 8px; letter-spacing: 0.3px; transition: background 0.15s; }
+  .btn-export:hover { background: var(--navy-dark); }
+  .btn-clear { width: 100%; background: white; color: var(--mid-gr); border: 1.5px solid var(--border); border-radius: 6px; padding: 8px 16px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .btn-clear:hover { border-color: var(--navy); color: var(--navy); }
+  .note { font-size: 10px; color: var(--mid-gr); text-align: center; margin-top: 10px; line-height: 1.5; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: flex-start; padding: 40px 20px; overflow-y: auto; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 10px; width: 100%; max-width: 800px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+  .modal-header { background: var(--navy); color: white; padding: 20px 28px; }
+  .modal-header h2 { font-size: 18px; font-weight: 700; }
+  .modal-header p { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+  .modal-body { padding: 28px; }
+  .modal-footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-print { background: var(--navy); color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-close { background: white; color: var(--dark); border: 1.5px solid var(--border); border-radius: 6px; padding: 10px 24px; font-size: 13px; cursor: pointer; font-family: inherit; }
+
+  .cim-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .cim-kpi { background: var(--lt-bg); border-radius: 6px; padding: 12px; text-align: center; border: 1px solid var(--border); }
+  .cim-kpi-val { font-size: 18px; font-weight: 800; color: var(--navy); }
+  .cim-kpi-lbl { font-size: 9px; color: var(--mid-gr); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+
+  .cim-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .cim-table th { background: var(--navy); color: white; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .cim-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  .cim-table tr:nth-child(even) td { background: #FAFAFA; }
+  .cim-table .total-row td { font-weight: 700; background: var(--cream) !important; border-bottom: 2px solid var(--navy); }
+  .cim-table td.num { text-align: right; }
+  .cim-table td.price-cell { text-align: right; font-weight: 700; color: var(--navy); }
+  .cim-table .ca-row td { color: var(--ca-border); }
+  .cim-table .az-row td { color: var(--az-border); }
+  .cim-table .tx-row td { color: var(--tx-border); }
+  .cim-table .nc-row td { color: var(--nc-border); }
+
+  @media print {
+    .modal-footer { display: none; }
+    .modal-overlay { position: relative; padding: 0; display: flex !important; }
+    .modal { box-shadow: none; }
+    body > *:not(.modal-overlay) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">P</div>
+    <div>
+      <div style="font-size:18px;font-weight:700;letter-spacing:0.5px;color:white;">Phenix Salon Suites</div>
+      <div class="header-sub">Corporate Divestiture Dashboard · Project Hedge Trimmer</div>
+    </div>
+  </div>
+  <div class="header-date">LTM P3 2026 · Confidential</div>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat-item"><div class="stat-val" id="statLocs">52</div><div class="stat-lbl">Total Locations</div></div>
+  <div class="stat-item"><div class="stat-val" id="statSuites">1,689+</div><div class="stat-lbl">Total Suites</div></div>
+  <div class="stat-item"><div class="stat-val" id="statRev">$19.8M</div><div class="stat-lbl">LTM Revenue</div></div>
+  <div class="stat-item"><div class="stat-val" id="statEBITDA">$3.5M</div><div class="stat-lbl">LTM EBITDA</div></div>
+  <div class="stat-item"><div class="stat-val" id="statAsk">$12.7M+</div><div class="stat-lbl">Asking Price (partial)</div></div>
+</div>
+
+<div class="layout">
+<div class="main" id="mainContent">
+  <div style="background:linear-gradient(135deg,#EBF3FB,#D6E8F8);border:1.5px solid #1B3A6B;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px">
+    <div style="font-size:24px;flex-shrink:0">📋</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#1B3A6B;margin-bottom:3px">Project Hedge Trimmer — CIM Builder</div>
+      <div style="font-size:12px;color:#555;line-height:1.5"><strong>Step 1:</strong> Click locations to select them &nbsp;·&nbsp; <strong>Step 2:</strong> Review your package in the panel on the right &nbsp;·&nbsp; <strong>Step 3:</strong> Click <em>"Generate CIM Deck with Claude"</em> and follow the instructions to get your PowerPoint</div>
+    </div>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Filter:</span>
+    <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('Colorado',this)">Colorado</button>
+    <button class="filter-btn" onclick="setFilter('Minnesota',this)">Minnesota</button>
+    <button class="filter-btn" onclick="setFilter('Florida',this)">Florida</button>
+    <button class="filter-btn" onclick="setFilter('Midwest',this)">Midwest</button>
+    <button class="filter-btn" onclick="setFilter('WI/IL',this)">WI / IL</button>
+    <button class="filter-btn az-btn" onclick="setFilter('Arizona',this)">Arizona</button>
+    <button class="filter-btn tx-btn" onclick="setFilter('Texas',this)">Texas</button>
+    <button class="filter-btn nc-btn" onclick="setFilter('Carolinas',this)">Carolinas</button>
+    <button class="filter-btn ca-btn" onclick="setFilter('California',this)">California ★</button>
+  </div>
+  <div id="locationsContainer"></div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-title">Package Builder</div>
+  <div class="sidebar-sub">Click locations to build a custom package</div>
+  <div id="packageEmpty" class="package-empty">
+    <div class="package-empty-icon">📦</div>
+    Select locations to build a purchase package.<br><br>Mix regions or select an entire market.
+  </div>
+  <div id="packageContent" style="display:none">
+    <div class="package-totals" id="packageTotals"></div>
+    <div class="selected-list" id="selectedList"></div>
+    <button class="btn-export" onclick="openExport()">📄 Export CIM Summary</button>
+    <button class="btn-export" onclick="openCimModal()" style="background:#C9A96E;color:#1A1A1A;margin-bottom:0">🏗 Generate CIM Deck with Claude</button>
+    <button class="btn-clear" onclick="clearAll()">Clear Selection</button>
+    <p class="note">Valuations based on 5.5x LTM P3 2026 EBITDA.<br>Negative EBITDA = asking price TBD.</p>
+  </div>
+</div>
+</div>
+
+<div class="modal-overlay" id="cimModal">
+  <div class="modal">
+    <div class="modal-header" style="background:#C9A96E">
+      <h2 style="color:#1A1A1A">🏗 Generate CIM Deck with Claude</h2>
+      <p style="color:#4A3A1A;opacity:1">Copy the prompt below → open Claude (Cowork) → paste it → get your PowerPoint</p>
+    </div>
+    <div class="modal-body">
+      <div style="background:#F0F4FF;border:1.5px solid #6B7FC4;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.7;color:#333">
+        <strong>How to use:</strong><br>
+        1. Click <strong>Copy Prompt</strong> below<br>
+        2. Open <strong>Claude → Cowork</strong> (desktop app)<br>
+        3. Start a new conversation and <strong>paste</strong> the prompt<br>
+        4. Claude will build the Project Hedge Trimmer CIM PowerPoint and deliver it as a .pptx file
+      </div>
+      <div style="position:relative">
+        <textarea id="cimPromptText" readonly style="width:100%;height:260px;font-size:11px;font-family:'Courier New',monospace;border:1.5px solid #E0E0E0;border-radius:6px;padding:12px;resize:none;background:#FAFAFA;color:#333;line-height:1.6"></textarea>
+        <button onclick="copyCimPrompt()" id="copyBtn" style="position:absolute;top:10px;right:10px;background:var(--navy);color:white;border:none;border-radius:5px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Copy</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-close" onclick="closeCimModal()">Close</button>
+      <button class="btn-print" onclick="copyCimPrompt()" style="background:#C9A96E;color:#1A1A1A">📋 Copy Prompt</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📋 CIM Package Summary</h2>
+      <p id="modalSubtitle">Confidential Information Memorandum — Selected Locations</p>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-close" onclick="closeExport()">Close</button>
+      <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const locations = [
+  { id:"az_arrowhead", uid:8004, name:"Arrowhead", state:"AZ", region:"Arizona", suites:18, sqft:3087, occ:0.9, ltmRev:247.4, ltmEBITDA:45.7, pfEBITDA:82.0, askPrice:251.3, awr:366.3, notes:"Smaller 18-suite Peoria/Arrowhead location running at 89% occupancy; mature E...", fullNotes:"Smaller 18-suite Peoria/Arrowhead location running at 89% occupancy; mature EBITDA of $82K on a low basis -- high-efficiency operator footprint." },
+  { id:"az_mesa", uid:8003, name:"Mesa", state:"AZ", region:"Arizona", suites:30, sqft:5230, occ:0.8, ltmRev:284.0, ltmEBITDA:40.9, pfEBITDA:142.6, askPrice:224.9, awr:292.8, notes:"Mature Mesa location at 80% occupancy; LTM EBITDA of $41K reflects near-term ...", fullNotes:"Mature Mesa location at 80% occupancy; LTM EBITDA of $41K reflects near-term lease cost headwinds, with stabilized EBITDA potential of $143K." },
+  { id:"az_scottsdale", uid:8001, name:"Scottsdale", state:"AZ", region:"Arizona", suites:42, sqft:7419, occ:0.9, ltmRev:594.0, ltmEBITDA:267.9, pfEBITDA:321.4, askPrice:1473.5, awr:427.3, notes:"Flagship AZ location in the Scottsdale premium market; 86% paid occupancy wit...", fullNotes:"Flagship AZ location in the Scottsdale premium market; 86% paid occupancy with $268K LTM EBITDA and $427 average weekly rate -- the portfolios top cash-flow producer." },
+  { id:"az_surprise", uid:8005, name:"Surprise", state:"AZ", region:"Arizona", suites:38, sqft:6650, occ:0.8, ltmRev:451.2, ltmEBITDA:173.3, pfEBITDA:254.2, askPrice:953.2, awr:311.2, notes:"Surprise submarket at 76% occupancy with solid $173K LTM EBITDA; mature EBITD...", fullNotes:"Surprise submarket at 76% occupancy with solid $173K LTM EBITDA; mature EBITDA of $254K expected as occupancy trends toward portfolio average." },
+  { id:"az_phoenixpv", uid:8002, name:"Phoenix (PV)", state:"AZ", region:"Arizona", suites:62, sqft:10809, occ:0.6, ltmRev:633.7, ltmEBITDA:230.6, pfEBITDA:404.2, askPrice:1268.3, awr:343.9, notes:"Largest AZ location at 62 suites in Phoenix Paradise Valley; 63% paid occupan...", fullNotes:"Largest AZ location at 62 suites in Phoenix Paradise Valley; 63% paid occupancy leaves meaningful upside, with mature EBITDA potential of $404K as occupancy normalizes." },
+  { id:"az_tucsoncampbell", uid:8008, name:"Tucson (Campbell)", state:"AZ", region:"Arizona", suites:33, sqft:6265, occ:0.9, ltmRev:355.7, ltmEBITDA:60.1, pfEBITDA:142.8, askPrice:330.6, awr:274.5, notes:"Tucson Campbell at 91% occupancy -- highest in the AZ portfolio; $60K LTM EBI...", fullNotes:"Tucson Campbell at 91% occupancy -- highest in the AZ portfolio; $60K LTM EBITDA reflects elevated rent, with $143K mature EBITDA as lease steps moderate." },
+  { id:"az_glendale", uid:8006, name:"Glendale", state:"AZ", region:"Arizona", suites:44, sqft:9194, occ:0.7, ltmRev:393.8, ltmEBITDA:-128.0, pfEBITDA:100.2, askPrice:null, awr:286.1, notes:"Glendale independent acquisition -- recently onboarded (Apr 2025) at 73% occu...", fullNotes:"Glendale independent acquisition -- recently onboarded (Apr 2025) at 73% occupancy; currently EBITDA-negative as location ramps toward $100K stabilized target." },
+  { id:"az_tucsonbroadway", uid:8007, name:"Tucson (Broadway)", state:"AZ", region:"Arizona", suites:29, sqft:4942, occ:0.9, ltmRev:348.3, ltmEBITDA:114.4, pfEBITDA:85.6, askPrice:629.2, awr:269.7, notes:"Tucson Broadway at 90% paid occupancy and $114K LTM EBITDA; well-leased locat...", fullNotes:"Tucson Broadway at 90% paid occupancy and $114K LTM EBITDA; well-leased location in the Tucson South submarket with a strong stylist retention profile." },
+  { id:"nc_cary", uid:6501, name:"Cary", state:"NC", region:"Southeast", suites:32, sqft:5906, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:320.5, notes:"Cary/Raleigh-Durham market; financial data pending -- newly integrated locati...", fullNotes:"Cary/Raleigh-Durham market; financial data pending -- newly integrated location with $321 average weekly suite rate indicating strong market-rate demand." },
+  { id:"nc_greensboro", uid:6502, name:"Greensboro", state:"NC", region:"Southeast", suites:29, sqft:4845, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:null, notes:"Greensboro location; financial data and AWR pending integration -- part of th...", fullNotes:"Greensboro location; financial data and AWR pending integration -- part of the Southeast portfolio build-out." },
+  { id:"co_kipling", uid:7007, name:"Kipling", state:"CO", region:"Colorado", suites:24, sqft:5493, occ:0.6, ltmRev:310.7, ltmEBITDA:15.1, pfEBITDA:25.5, askPrice:83.0, awr:319.8, notes:"Kipling (Littleton South) at 65% occupancy with tight $15K-$26K EBITDA range;...", fullNotes:"Kipling (Littleton South) at 65% occupancy with tight $15K-$26K EBITDA range; longer-dated lease and lower rent basis make it a stable hold candidate." },
+  { id:"co_tamarac", uid:7001, name:"Tamarac", state:"CO", region:"Colorado", suites:31, sqft:5899, occ:0.7, ltmRev:373.9, ltmEBITDA:30.8, pfEBITDA:65.1, askPrice:550.0, awr:319.5, notes:"Denver Tamarac at 74% paid occupancy; LTM EBITDA of $31K reflects a seasoned ...", fullNotes:"Denver Tamarac at 74% paid occupancy; LTM EBITDA of $31K reflects a seasoned asset with clear upside to $65K as occupancy trends toward the 85%+ range." },
+  { id:"co_boulder", uid:7002, name:"Boulder", state:"CO", region:"Colorado", suites:22, sqft:4437, occ:0.7, ltmRev:282.5, ltmEBITDA:37.7, pfEBITDA:37.8, askPrice:425.0, awr:336.9, notes:"Boulder at 73% occupancy and $338 average weekly rate -- one of the highest A...", fullNotes:"Boulder at 73% occupancy and $338 average weekly rate -- one of the highest AWR locations in Colorado, indicating premium market positioning with further earnings upside." },
+  { id:"co_lonetree", uid:7004, name:"Lone Tree", state:"CO", region:"Colorado", suites:39, sqft:7152, occ:0.9, ltmRev:503.9, ltmEBITDA:92.9, pfEBITDA:144.7, askPrice:825.0, awr:305.1, notes:"Lone Tree at 92% occupancy -- best in the CO portfolio; $93K LTM EBITDA trend...", fullNotes:"Lone Tree at 92% occupancy -- best in the CO portfolio; $93K LTM EBITDA trending toward $145K at full stabilization, supported by strong $305 average weekly rate." },
+  { id:"co_northfield", uid:7006, name:"Northfield", state:"CO", region:"Colorado", suites:27, sqft:5056, occ:0.9, ltmRev:403.2, ltmEBITDA:95.2, pfEBITDA:84.9, askPrice:750.0, awr:340.4, notes:"Northfield (Denver) at 89% occupancy with $95K LTM EBITDA -- one of the stron...", fullNotes:"Northfield (Denver) at 89% occupancy with $95K LTM EBITDA -- one of the strongest current cash-flow performers in the Colorado package." },
+  { id:"co_littleton", uid:7005, name:"Littleton", state:"CO", region:"Colorado", suites:32, sqft:5500, occ:0.6, ltmRev:272.3, ltmEBITDA:-12.8, pfEBITDA:76.4, askPrice:null, awr:260.1, notes:"Littleton (Southwest Plaza) at 59% paid occupancy -- primary turnaround asset...", fullNotes:"Littleton (Southwest Plaza) at 59% paid occupancy -- primary turnaround asset in the CO package; $76K mature EBITDA target achievable with focused stylist recruiting." },
+  { id:"co_northglenn", uid:7009, name:"Northglenn", state:"CO", region:"Colorado", suites:32, sqft:5682, occ:0.8, ltmRev:351.9, ltmEBITDA:85.8, pfEBITDA:127.9, askPrice:725.0, awr:266.0, notes:"Northglenn -- newest CO location (Jan 2026); 82% occupancy already achieved s...", fullNotes:"Northglenn -- newest CO location (Jan 2026); 82% occupancy already achieved shortly post-open with $86K LTM EBITDA, indicating strong early velocity." },
+  { id:"co_arvada", uid:7008, name:"Arvada", state:"CO", region:"Colorado", suites:29, sqft:4967, occ:0.4, ltmRev:182.0, ltmEBITDA:-68.6, pfEBITDA:60.7, askPrice:null, awr:269.0, notes:"Arvada -- newly acquired (May 2025) at 45% occupancy; EBITDA-negative as loca...", fullNotes:"Arvada -- newly acquired (May 2025) at 45% occupancy; EBITDA-negative as location is ramping; $61K stabilized EBITDA target with $269 weekly rate already established." },
+  { id:"co_parker", uid:7003, name:"Parker", state:"CO", region:"Colorado", suites:23, sqft:3755, occ:0.9, ltmRev:260.1, ltmEBITDA:50.7, pfEBITDA:51.0, askPrice:450.0, awr:253.0, notes:"Parker at 91% occupancy -- near fully leased; $51K LTM and mature EBITDA are ...", fullNotes:"Parker at 91% occupancy -- near fully leased; $51K LTM and mature EBITDA are closely matched, reflecting a stable, predictable cash-flow asset." },
+  { id:"ca_brea", uid:2010, name:"Brea", state:"CA", region:"California", suites:27, sqft:5001, occ:0.9, ltmRev:375.8, ltmEBITDA:13.4, pfEBITDA:97.3, askPrice:73.7, awr:335.1, notes:"Brea at 89% occupancy; $13K LTM EBITDA understates earning power -- $97K matu...", fullNotes:"Brea at 89% occupancy; $13K LTM EBITDA understates earning power -- $97K mature EBITDA reflects lease and ramp normalization ahead." },
+  { id:"ca_torrance", uid:2011, name:"Torrance", state:"CA", region:"California", suites:41, sqft:7000, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:291.6, notes:"Torrance Promenade -- opened Aug 2025; AWR of $292 establishing early; financ...", fullNotes:"Torrance Promenade -- opened Aug 2025; AWR of $292 establishing early; financial data pending full first-year cycle." },
+  { id:"ca_santamonica", uid:2009, name:"Santa Monica", state:"CA", region:"California", suites:24, sqft:4110, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:422.1, notes:"Santa Monica -- recently integrated (Feb 2025); $422 average weekly rate sign...", fullNotes:"Santa Monica -- recently integrated (Feb 2025); $422 average weekly rate signals premium market positioning in one of LAs highest-demand corridors." },
+  { id:"ca_camarillo", uid:2002, name:"Camarillo", state:"CA", region:"California", suites:24, sqft:4344, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:309.7, notes:"Camarillo; financial data pending integration -- AWR of $310 reflects mid-mar...", fullNotes:"Camarillo; financial data pending integration -- AWR of $310 reflects mid-market Ventura County positioning." },
+  { id:"ca_northhollywood", uid:2004, name:"North Hollywood", state:"CA", region:"California", suites:46, sqft:8450, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:404.3, notes:"North Hollywood; financial data pending integration -- $404 average weekly ra...", fullNotes:"North Hollywood; financial data pending integration -- $404 average weekly rate reflects strong LA market demand." },
+  { id:"ca_westwood", uid:2007, name:"Westwood", state:"CA", region:"California", suites:27, sqft:5982, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:513.7, notes:"Westwood (Los Angeles) -- highest AWR location in the portfolio at $514/week;...", fullNotes:"Westwood (Los Angeles) -- highest AWR location in the portfolio at $514/week; immature as of late 2024 acquisition with significant earnings upside in premium UCLA-area market." },
+  { id:"in_indianapolis", uid:1002, name:"Indianapolis", state:"IN", region:"Midwest", suites:29, sqft:4980, occ:0.8, ltmRev:354.2, ltmEBITDA:94.1, pfEBITDA:159.0, askPrice:550.0, awr:274.7, notes:"Indianapolis (Greenwood Park) at 79% occupancy with $94K LTM EBITDA; $159K ma...", fullNotes:"Indianapolis (Greenwood Park) at 79% occupancy with $94K LTM EBITDA; $159K mature EBITDA upside as occupancy fills over the next 12-18 months." },
+  { id:"oh_mason", uid:5000, name:"Mason", state:"OH", region:"Midwest", suites:26, sqft:4500, occ:1.0, ltmRev:280.7, ltmEBITDA:21.0, pfEBITDA:39.5, askPrice:350.0, awr:251.0, notes:"Mason (Cincinnati North) at 100% occupancy -- waitlist-eligible; $21K LTM EBI...", fullNotes:"Mason (Cincinnati North) at 100% occupancy -- waitlist-eligible; $21K LTM EBITDA reflects near-term cost headwinds, with $40K stabilized target." },
+  { id:"oh_fairfax", uid:5001, name:"Fairfax", state:"OH", region:"Midwest", suites:31, sqft:5604, occ:0.8, ltmRev:351.2, ltmEBITDA:61.8, pfEBITDA:141.3, askPrice:500.0, awr:294.6, notes:"Fairfax (Cincinnati) -- acquired Feb 2025 at 77% occupancy; $62K LTM EBITDA w...", fullNotes:"Fairfax (Cincinnati) -- acquired Feb 2025 at 77% occupancy; $62K LTM EBITDA with a clear ramp to $141K as the immature location matures over 12-24 months." },
+  { id:"in_carmel", uid:1001, name:"Carmel", state:"IN", region:"Midwest", suites:25, sqft:4510, occ:1.0, ltmRev:312.6, ltmEBITDA:60.7, pfEBITDA:78.1, askPrice:500.0, awr:279.9, notes:"Carmel (Indianapolis North) at 96% occupancy -- effectively fully leased; $61...", fullNotes:"Carmel (Indianapolis North) at 96% occupancy -- effectively fully leased; $61K LTM EBITDA on a low-cost original build basis with consistent suite demand." },
+  { id:"ky_florence", uid:4000, name:"Florence", state:"KY", region:"Midwest", suites:22, sqft:4108, occ:1.0, ltmRev:258.7, ltmEBITDA:55.1, pfEBITDA:72.7, askPrice:400.0, awr:241.8, notes:"Florence (Cincinnati MSA) at 95% occupancy -- one of the highest in the Midwe...", fullNotes:"Florence (Cincinnati MSA) at 95% occupancy -- one of the highest in the Midwest package; $55K LTM EBITDA on a fully mature cost basis." },
+  { id:"mn_crystal", uid:6003, name:"Crystal", state:"MN", region:"MN / FL", suites:30, sqft:5400, occ:0.8, ltmRev:282.6, ltmEBITDA:27.7, pfEBITDA:99.0, askPrice:450.0, awr:264.4, notes:"Crystal at 77% occupancy; currently generating $28K EBITDA with $99K stabiliz...", fullNotes:"Crystal at 77% occupancy; currently generating $28K EBITDA with $99K stabilized potential as occupancy grows toward the portfolio average." },
+  { id:"mn_eagan", uid:6004, name:"Eagan", state:"MN", region:"MN / FL", suites:43, sqft:7669, occ:0.7, ltmRev:435.9, ltmEBITDA:94.2, pfEBITDA:190.5, askPrice:900.0, awr:337.5, notes:"Eagan at 72% occupancy -- immature as of Feb 2025 acquisition; $94K current E...", fullNotes:"Eagan at 72% occupancy -- immature as of Feb 2025 acquisition; $94K current EBITDA already strong with $191K mature target representing the largest MN upside." },
+  { id:"mn_edina", uid:6002, name:"Edina", state:"MN", region:"MN / FL", suites:37, sqft:6852, occ:0.9, ltmRev:587.9, ltmEBITDA:172.7, pfEBITDA:158.4, askPrice:1000.0, awr:340.1, notes:"Edina -- flagship MN location at 86% occupancy with $173K LTM EBITDA; mature,...", fullNotes:"Edina -- flagship MN location at 86% occupancy with $173K LTM EBITDA; mature, stable cash-flow asset in the Minneapolis premium submarket." },
+  { id:"mn_roseville", uid:6001, name:"Roseville", state:"MN", region:"MN / FL", suites:23, sqft:4000, occ:0.7, ltmRev:354.1, ltmEBITDA:27.4, pfEBITDA:71.7, askPrice:580.0, awr:352.7, notes:"Roseville at 66% occupancy with a strong $353 average weekly rate -- one of t...", fullNotes:"Roseville at 66% occupancy with a strong $353 average weekly rate -- one of the highest AWRs in the MN portfolio; $72K mature EBITDA target as occupancy improves." },
+  { id:"fl_orangepark", uid:3500, name:"Orange Park", state:"FL", region:"MN / FL", suites:30, sqft:5115, occ:0.9, ltmRev:312.2, ltmEBITDA:101.3, pfEBITDA:85.4, askPrice:630.0, awr:262.6, notes:"Orange Park (Jacksonville MSA) at 87% occupancy; $101K LTM EBITDA generated i...", fullNotes:"Orange Park (Jacksonville MSA) at 87% occupancy; $101K LTM EBITDA generated in the locations early months -- strong out-of-gate performance for an immature asset." },
+  { id:"ca_lajolla", uid:2006, name:"La Jolla", state:"CA", region:"California", suites:33, sqft:6400, occ:0.8, ltmRev:288.0, ltmEBITDA:-44.4, pfEBITDA:66.3, askPrice:null, awr:287.1, notes:"La Jolla at 76% occupancy; currently EBITDA-negative at -$44K LTM due to elev...", fullNotes:"La Jolla at 76% occupancy; currently EBITDA-negative at -$44K LTM due to elevated market rent -- $66K mature EBITDA target requires continued occupancy growth." },
+  { id:"ca_sanclemente", uid:2008, name:"San Clemente", state:"CA", region:"California", suites:22, sqft:4034, occ:1.0, ltmRev:364.3, ltmEBITDA:121.3, pfEBITDA:70.3, askPrice:667.1, awr:352.3, notes:"San Clemente at 100% occupancy -- fully leased; $121K LTM EBITDA generated on...", fullNotes:"San Clemente at 100% occupancy -- fully leased; $121K LTM EBITDA generated on just 22 suites reflects exceptional stylist demand and market-rate premium." },
+  { id:"ca_missionvalley", uid:2003, name:"Mission Valley", state:"CA", region:"California", suites:56, sqft:9959, occ:0.8, ltmRev:811.3, ltmEBITDA:273.6, pfEBITDA:349.6, askPrice:1504.8, awr:406.4, notes:"Mission Valley (San Diego) -- largest CA location at 56 suites; 82% occupancy...", fullNotes:"Mission Valley (San Diego) -- largest CA location at 56 suites; 82% occupancy with $274K LTM EBITDA and $406 average weekly rate -- top CA cash-flow producer." },
+  { id:"ca_bonita", uid:2005, name:"Bonita", state:"CA", region:"California", suites:48, sqft:9005, occ:0.8, ltmRev:666.5, ltmEBITDA:244.1, pfEBITDA:335.9, askPrice:1342.5, awr:338.6, notes:"Bonita (National City, San Diego) at 79% occupancy; $244K LTM EBITDA with a c...", fullNotes:"Bonita (National City, San Diego) at 79% occupancy; $244K LTM EBITDA with a clear path to $336K as occupancy fills toward the 90%+ range." },
+  { id:"tx_houston", uid:1510, name:"Houston", state:"TX", region:"Texas", suites:28, sqft:4500, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:212.2, notes:"Houston (Champions) -- newly onboarded with financials pending; $212 AWR curr...", fullNotes:"Houston (Champions) -- newly onboarded with financials pending; $212 AWR currently below portfolio average, reflecting an early ramp-up phase." },
+  { id:"ca_westhollywood", uid:2012, name:"West Hollywood", state:"CA", region:"California", suites:41, sqft:7575, occ:null, ltmRev:null, ltmEBITDA:null, pfEBITDA:null, askPrice:null, awr:null, notes:"West Hollywood -- newest CA location; pre-stabilization with financial data p...", fullNotes:"West Hollywood -- newest CA location; pre-stabilization with financial data pending; premium Sunset Strip submarket expected to command top-decile AWR." },
+  { id:"tx_sanantonio", uid:1003, name:"San Antonio", state:"TX", region:"Texas", suites:30, sqft:4952, occ:0.7, ltmRev:332.1, ltmEBITDA:76.2, pfEBITDA:87.3, askPrice:419.1, awr:307.8, notes:"San Antonio (Starcrest) at 70% occupancy -- immature as of late 2024; $76K LT...", fullNotes:"San Antonio (Starcrest) at 70% occupancy -- immature as of late 2024; $76K LTM EBITDA with $87K mature target; foundational location in the SA market." },
+  { id:"tx_blanco", uid:1501, name:"Blanco", state:"TX", region:"Texas", suites:41, sqft:8000, occ:0.7, ltmRev:493.8, ltmEBITDA:30.2, pfEBITDA:115.4, askPrice:166.1, awr:292.0, notes:"San Antonio (Blanco) at 66% occupancy -- immature with a large 41-suite footp...", fullNotes:"San Antonio (Blanco) at 66% occupancy -- immature with a large 41-suite footprint; $30K LTM EBITDA expected to scale to $115K as stylist fill rates improve." },
+  { id:"tx_dominion", uid:1503, name:"Dominion", state:"TX", region:"Texas", suites:43, sqft:10107, occ:0.9, ltmRev:647.1, ltmEBITDA:136.7, pfEBITDA:211.9, askPrice:751.8, awr:348.6, notes:"San Antonio (Dominion/Medical Center) at 86% occupancy; $137K LTM EBITDA with...", fullNotes:"San Antonio (Dominion/Medical Center) at 86% occupancy; $137K LTM EBITDA with a $212K mature target -- second-largest cash-flow producer in the TX package." },
+  { id:"tx_bulverde", uid:1504, name:"Bulverde", state:"TX", region:"Texas", suites:41, sqft:9000, occ:0.8, ltmRev:596.3, ltmEBITDA:85.7, pfEBITDA:193.5, askPrice:471.4, awr:311.3, notes:"San Antonio (Bulverde) at 76% occupancy with $86K LTM EBITDA; $194K mature EB...", fullNotes:"San Antonio (Bulverde) at 76% occupancy with $86K LTM EBITDA; $194K mature EBITDA target as this newer suburban location continues to ramp." },
+  { id:"tx_newbraunfels", uid:1505, name:"New Braunfels", state:"TX", region:"Texas", suites:45, sqft:9601, occ:0.8, ltmRev:617.8, ltmEBITDA:166.8, pfEBITDA:273.8, askPrice:917.4, awr:356.9, notes:"New Braunfels at 83% occupancy and $357 average weekly rate -- highest AWR in...", fullNotes:"New Braunfels at 83% occupancy and $357 average weekly rate -- highest AWR in the TX package; $167K LTM EBITDA tracking toward $274K at full stabilization." },
+  { id:"tx_culebra", uid:1502, name:"Culebra", state:"TX", region:"Texas", suites:46, sqft:8170, occ:0.9, ltmRev:644.6, ltmEBITDA:190.7, pfEBITDA:259.2, askPrice:1048.8, awr:305.6, notes:"San Antonio (Culebra) at 89% occupancy -- best occ in the TX portfolio; $191K...", fullNotes:"San Antonio (Culebra) at 89% occupancy -- best occ in the TX portfolio; $191K LTM EBITDA and $306 AWR reflect a well-established, high-demand location." },
+  { id:"tx_gateway", uid:1506, name:"Gateway", state:"TX", region:"Texas", suites:62, sqft:13500, occ:0.5, ltmRev:488.0, ltmEBITDA:-41.2, pfEBITDA:531.7, askPrice:null, awr:258.5, notes:"Live Oak (Gateway) -- acquired Feb 2025 at 55% occupancy; currently EBITDA-ne...", fullNotes:"Live Oak (Gateway) -- acquired Feb 2025 at 55% occupancy; currently EBITDA-negative as this large 62-suite location ramps; $532K mature EBITDA represents the largest single-location upside in the portfolio." },
+  { id:"il_countryside", uid:9002, name:"Countryside", state:"IL", region:"WI / IL", suites:29, sqft:4990, occ:0.9, ltmRev:346.6, ltmEBITDA:104.8, pfEBITDA:123.9, askPrice:600.0, awr:260.9, notes:"Countryside (Chicago West) at 86% occupancy with $105K LTM EBITDA -- the cash...", fullNotes:"Countryside (Chicago West) at 86% occupancy with $105K LTM EBITDA -- the cash-flow anchor of the WI/IL package." },
+  { id:"wi_brookfield", uid:9004, name:"Brookfield", state:"WI", region:"WI / IL", suites:32, sqft:5705, occ:0.6, ltmRev:189.9, ltmEBITDA:-56.8, pfEBITDA:95.6, askPrice:null, awr:206.5, notes:"Brookfield at 63% occupancy -- primary turnaround asset in the WI/IL package;...", fullNotes:"Brookfield at 63% occupancy -- primary turnaround asset in the WI/IL package; currently EBITDA-negative with $96K mature target as occupancy improves." },
+  { id:"il_oswego", uid:9001, name:"Oswego", state:"IL", region:"WI / IL", suites:29, sqft:5039, occ:1.0, ltmRev:338.3, ltmEBITDA:143.3, pfEBITDA:123.8, askPrice:650.0, awr:244.7, notes:"Oswego at 97% occupancy -- highest in the WI/IL package; $143K LTM EBITDA on ...", fullNotes:"Oswego at 97% occupancy -- highest in the WI/IL package; $143K LTM EBITDA on a mature asset; fully leased with waitlist potential." },
+  { id:"wi_greenfield", uid:9003, name:"Greenfield", state:"WI", region:"WI / IL", suites:34, sqft:6324, occ:0.9, ltmRev:369.0, ltmEBITDA:105.0, pfEBITDA:100.9, askPrice:600.0, awr:242.2, notes:"Greenfield (Milwaukee) at 91% occupancy with $105K LTM EBITDA; mature, stable...", fullNotes:"Greenfield (Milwaukee) at 91% occupancy with $105K LTM EBITDA; mature, stable performer with consistent suite demand in the Milwaukee metro." },
+  { id:"_", uid:"TOTALS", name:"", state:"", region:"", suites:1761, sqft:326774, occ:null, ltmRev:17348.1, ltmEBITDA:3397.1, pfEBITDA:6339.0, askPrice:11435.0, awr:null, notes:"", fullNotes:"" }
+];
+
+const REGION_GROUPS = [
+  { key:"MN+FL", label:"Minnesota + Florida", ask:"$3.95M", askNote:"regional ask", regions:['MN / FL'] },
+  { key:"Colorado", label:"Colorado", ask:"$3.81M", askNote:"regional ask", regions:['Colorado'] },
+  { key:"Midwest", label:"Midwest (IN / KY / OH)", ask:"$2.30M", askNote:"regional ask", regions:['Midwest'] },
+  { key:"WI/IL", label:"Wisconsin / Illinois", ask:"$1.85M", askNote:"regional ask", regions:['WI / IL'] },
+  { key:"Arizona", label:"Arizona", ask:"$5.13M", askNote:"5.5x EBITDA", regions:['Arizona'], isAz:true },
+  { key:"Texas", label:"Texas", ask:"$3.77M", askNote:"5.5x EBITDA", regions:['Texas'], isTx:true },
+  { key:"California", label:"California", ask:"$3.59M", askNote:"pricing under review", regions:['California'], isCa:true },
+  { key:"Southeast", label:"Carolinas (NC)", ask:"TBD", askNote:"new / ramping", regions:['Southeast'], isNc:true }
+];
+
+let selected = new Set();
+let currentFilter = 'all';
+
+function fmtPct(n) { return n===null||n===undefined ? '—' : Math.round(n*100)+'%'; }
+function occClass(occ) { if(occ===null)return''; if(occ<0.65)return'very-low'; if(occ<0.80)return'low'; return''; }
+function cardClass(r) { return r==='California'?'ca-card':r==='Arizona'?'az-card':r==='Texas'?'tx-card':r==='Carolinas'?'nc-card':''; }
+function itemClass(r) { return r==='California'?'ca-item':r==='Arizona'?'az-item':r==='Texas'?'tx-item':r==='Carolinas'?'nc-item':''; }
+function noteCls(r) { return r==='Arizona'?'az':r==='Texas'?'tx':r==='Carolinas'?'nc':''; }
+function fmtK(n) { return n===null?'—':(n<0?'($'+Math.abs(n)+'K)':'$'+n+'K'); }
+
+function buildCard(loc) {
+  const cc = cardClass(loc.region);
+  const isSelected = selected.has(loc.id);
+  const eColor = loc.ltmEBITDA!==null?(loc.ltmEBITDA<0?'negative':loc.ltmEBITDA>50?'positive':''):'';
+  let priceHtml;
+  if (loc.askPrice) priceHtml = `<span class="price-val">$${loc.askPrice}K</span>`;
+  else if (loc.ltmEBITDA!==null && loc.ltmEBITDA<0) priceHtml = `<span class="price-neg">Neg. EBITDA</span>`;
+  else priceHtml = `<span class="price-tbd">TBD</span>`;
+  const occFill = loc.occ!==null ? `<div class="occ-bar-fill ${occClass(loc.occ)}" style="width:${Math.min(100,loc.occ*100)}%"></div>` : `<div class="occ-bar-fill" style="width:0%"></div>`;
+  const noteHtml = loc.notes ? `<div class="note-badge ${noteCls(loc.region)}">ℹ ${loc.notes}</div>` : '';
+  return `<div class="card ${cc} ${isSelected?'selected':''}" id="card-${loc.id}" onclick="toggleCard('${loc.id}')">
+    <div class="card-check"></div>
+    <div class="card-location">${loc.name}</div>
+    <div class="card-state-badge">${loc.state}</div>
+    <div class="card-metrics">
+      <div><div class="metric-val">${loc.suites??'—'}</div><div class="metric-lbl">Suites</div></div>
+      <div><div class="metric-val ${eColor}">${fmtK(loc.ltmEBITDA)}</div><div class="metric-lbl">LTM EBITDA</div></div>
+      <div><div class="metric-val">${loc.ltmRev!==null?'$'+loc.ltmRev+'K':'—'}</div><div class="metric-lbl">LTM Revenue</div></div>
+      <div><div class="metric-val">${loc.pfEBITDA!==null?'$'+loc.pfEBITDA+'K':'—'}</div><div class="metric-lbl">P12 EBITDA</div></div>
+    </div>
+    <div class="occ-bar-wrap">
+      <div class="occ-bar-label"><span>Occupancy</span><strong>${fmtPct(loc.occ)}</strong></div>
+      <div class="occ-bar-bg">${occFill}</div>
+    </div>
+    ${noteHtml}
+    <div class="card-price"><span class="price-label">Asking (5.5x)</span>${priceHtml}</div>
+  </div>`;
+}
+
+function renderLocations() {
+  const container = document.getElementById('locationsContainer');
+  let html = '';
+  for (const grp of REGION_GROUPS) {
+    let locs = locations.filter(l => grp.regions.includes(l.region));
+    if (currentFilter !== 'all') {
+      const f = currentFilter.toLowerCase();
+      if (grp.key === 'MN+FL') {
+        locs = locs.filter(l => l.region.toLowerCase() === f);
+        if (!locs.length) continue;
+      } else {
+        if (!grp.regions.map(r=>r.toLowerCase()).includes(f)) continue;
+      }
+    }
+    if (!locs.length) continue;
+    const rCls = grp.isCa?'region-ca':grp.isAz?'region-az':grp.isTx?'region-tx':grp.isNc?'region-nc':'';
+    html += `<div class="region-section ${rCls}">
+      <div class="region-header">
+        <span class="region-title">${grp.label}</span>
+        <span class="region-ask">${grp.ask} <span>${grp.askNote}</span></span>
+      </div>
+      <div class="card-grid">${locs.map(buildCard).join('')}</div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f.toLowerCase()==='all'?'all':f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLocations();
+}
+
+function toggleCard(id) {
+  if(selected.has(id)) selected.delete(id); else selected.add(id);
+  renderLocations(); renderSidebar();
+}
+
+function clearAll() { selected.clear(); renderLocations(); renderSidebar(); }
+
+function renderSidebar() {
+  const empty = document.getElementById('packageEmpty');
+  const content = document.getElementById('packageContent');
+  if(!selected.size) { empty.style.display=''; content.style.display='none'; return; }
+  empty.style.display='none'; content.style.display='';
+  const sel = locations.filter(l=>selected.has(l.id));
+  const totalSuites = sel.reduce((a,l)=>a+(l.suites||0),0);
+  const totalRev    = sel.reduce((a,l)=>a+(l.ltmRev||0),0);
+  const totalEB     = sel.reduce((a,l)=>a+(l.ltmEBITDA||0),0);
+  const totalPF     = sel.reduce((a,l)=>a+(l.pfEBITDA||0),0);
+  const totalAsk    = sel.reduce((a,l)=>a+(l.askPrice||0),0);
+  const hasTBD      = sel.some(l=>!l.askPrice);
+  const occSel      = sel.filter(l=>l.occ!==null);
+  const avgOcc      = occSel.length ? occSel.reduce((a,l,_,arr)=>a+l.occ/arr.length,0) : null;
+
+  document.getElementById('packageTotals').innerHTML = `
+    <div class="pkg-row"><span class="pkg-row-label">Locations</span><span class="pkg-row-val">${sel.length}</span></div>
+    <div class="pkg-row"><span class="pkg-row-label">Total Suites</span><span class="pkg-row-val">${totalSuites||'—'}</span></div>
+    <div class="pkg-row"><span class="pkg-row-label">Avg Occupancy</span><span class="pkg-row-val">${fmtPct(avgOcc)}</span></div>
+    <div class="pkg-row"><span class="pkg-row-label">LTM Revenue</span><span class="pkg-row-val">${totalRev>0?'$'+(totalRev/1000).toFixed(2)+'M':'—'}</span></div>
+    <div class="pkg-row"><span class="pkg-row-label">LTM EBITDA</span><span class="pkg-row-val" style="color:${totalEB<0?'#c0392b':'#27ae60'}">${totalRev>0?fmtK(totalEB):'—'}</span></div>
+    <div class="pkg-row"><span class="pkg-row-label">P12 EBITDA</span><span class="pkg-row-val">${totalPF>0?'$'+(totalPF/1000).toFixed(2)+'M':'—'}</span></div>
+    <div class="pkg-price-row">
+      <span class="pkg-price-label">Package Price</span>
+      <span class="pkg-price-val">${totalAsk>0?'$'+(totalAsk/1000).toFixed(2)+'M':''}${hasTBD?(totalAsk>0?' +':'')+'TBD':''}</span>
+    </div>`;
+
+  document.getElementById('selectedList').innerHTML = sel.map(l=>`
+    <div class="selected-item ${itemClass(l.region)}">
+      <div><div class="sel-name">${l.name}</div><div class="sel-state">${l.state} · ${l.region}</div></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="sel-price">${l.askPrice?'$'+l.askPrice+'K':'TBD'}</span>
+        <button class="sel-remove" onclick="event.stopPropagation();toggleCard('${l.id}')">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function openExport() {
+  const sel = locations.filter(l=>selected.has(l.id));
+  if(!sel.length) return;
+  const totalSuites = sel.reduce((a,l)=>a+(l.suites||0),0);
+  const totalRev    = sel.reduce((a,l)=>a+(l.ltmRev||0),0);
+  const totalEB     = sel.reduce((a,l)=>a+(l.ltmEBITDA||0),0);
+  const totalPF     = sel.reduce((a,l)=>a+(l.pfEBITDA||0),0);
+  const totalAsk    = sel.reduce((a,l)=>a+(l.askPrice||0),0);
+  const hasTBD      = sel.some(l=>!l.askPrice);
+  const occSel      = sel.filter(l=>l.occ!==null);
+  const avgOcc      = occSel.length ? occSel.reduce((a,l,_,arr)=>a+l.occ/arr.length,0) : null;
+  const margin      = totalRev>0?(totalEB/totalRev*100).toFixed(1):'—';
+  document.getElementById('modalSubtitle').textContent =
+    [...new Set(sel.map(l=>l.region))].join(' + ') + ' · LTM P3 2026 · Confidential';
+  const order = ['Colorado','Minnesota','Florida','Midwest','WI/IL','Arizona','Texas','Carolinas','California'];
+  const sorted = [...sel].sort((a,b)=>order.indexOf(a.region)-order.indexOf(b.region));
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:11px;color:#666;margin-bottom:12px">
+      Prepared: ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} &nbsp;·&nbsp;
+      Source: Selling Locations 6.9.26.xlsx &nbsp;·&nbsp; Valuations at 5.5x LTM P3 2026 EBITDA
+    </div>
+    <div class="cim-kpis">
+      <div class="cim-kpi"><div class="cim-kpi-val">${sel.length}</div><div class="cim-kpi-lbl">Locations</div></div>
+      <div class="cim-kpi"><div class="cim-kpi-val">${totalSuites||'—'}</div><div class="cim-kpi-lbl">Total Suites</div></div>
+      <div class="cim-kpi"><div class="cim-kpi-val">${fmtPct(avgOcc)}</div><div class="cim-kpi-lbl">Avg Occupancy</div></div>
+      <div class="cim-kpi"><div class="cim-kpi-val">${totalRev>0?'$'+(totalRev/1000).toFixed(1)+'M':'—'}</div><div class="cim-kpi-lbl">LTM Revenue</div></div>
+    </div>
+    <div class="cim-kpis">
+      <div class="cim-kpi"><div class="cim-kpi-val">${totalRev>0?fmtK(totalEB):'—'}</div><div class="cim-kpi-lbl">LTM EBITDA</div></div>
+      <div class="cim-kpi"><div class="cim-kpi-val">${margin}%</div><div class="cim-kpi-lbl">EBITDA Margin</div></div>
+      <div class="cim-kpi"><div class="cim-kpi-val">${totalPF>0?'$'+(totalPF/1000).toFixed(1)+'M':'—'}</div><div class="cim-kpi-lbl">P12 EBITDA</div></div>
+      <div class="cim-kpi"><div class="cim-kpi-val" style="font-size:15px">${totalAsk>0?'$'+(totalAsk/1000).toFixed(2)+'M':''}${hasTBD?(totalAsk>0?' + ':'')+'TBD':''}</div><div class="cim-kpi-lbl">Asking Price</div></div>
+    </div>
+    <table class="cim-table">
+      <thead><tr><th>Location</th><th>ST</th><th>Region</th><th>Suites</th><th>Occ%</th><th>LTM Rev</th><th>LTM EBITDA</th><th>P12 EBITDA</th><th>Ask (5.5x)</th></tr></thead>
+      <tbody>
+        ${sorted.map(l=>`<tr class="${l.region==='California'?'ca-row':l.region==='Arizona'?'az-row':l.region==='Texas'?'tx-row':l.region==='Carolinas'?'nc-row':''}">
+          <td>${l.name}</td><td>${l.state}</td><td>${l.region}</td>
+          <td class="num">${l.suites??'—'}</td>
+          <td class="num">${l.occ!==null?Math.round(l.occ*100)+'%':'—'}</td>
+          <td class="num">${l.ltmRev!==null?'$'+l.ltmRev+'K':'—'}</td>
+          <td class="num">${fmtK(l.ltmEBITDA)}</td>
+          <td class="num">${l.pfEBITDA!==null?'$'+l.pfEBITDA+'K':'—'}</td>
+          <td class="num price-cell">${l.askPrice?'$'+l.askPrice+'K':'TBD'}</td>
+        </tr>`).join('')}
+        <tr class="total-row">
+          <td colspan="3"><strong>TOTAL</strong></td>
+          <td class="num"><strong>${totalSuites||'—'}</strong></td>
+          <td class="num"><strong>${fmtPct(avgOcc)}</strong></td>
+          <td class="num"><strong>${totalRev>0?'$'+(totalRev/1000).toFixed(1)+'M':'—'}</strong></td>
+          <td class="num"><strong>${totalRev>0?fmtK(totalEB):'—'}</strong></td>
+          <td class="num"><strong>${totalPF>0?'$'+(totalPF/1000).toFixed(1)+'M':'—'}</strong></td>
+          <td class="num price-cell"><strong>${totalAsk>0?'$'+(totalAsk/1000).toFixed(2)+'M':''}${hasTBD?(totalAsk>0?' + ':'')+'TBD':''}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    ${sorted.filter(l=>l.notes).length?`<div style="margin-top:12px;font-size:10px;color:#666">${sorted.filter(l=>l.notes).map(l=>`<strong>${l.name}:</strong> ${l.notes}`).join(' · ')}</div>`:''}
+    ${hasTBD?`<div style="margin-top:12px;padding:10px 14px;background:#F0F4FF;border-left:3px solid #6B7FC4;border-radius:4px;font-size:11px;color:#444">Locations showing <em>TBD</em> have negative EBITDA or insufficient data for valuation at this time.</div>`:''}`;
+  document.getElementById('exportModal').classList.add('open');
+}
+
+function closeExport() { document.getElementById('exportModal').classList.remove('open'); }
+
+function buildPackageSummary(sel) {
+  const regions = [...new Set(sel.map(l=>l.region))];
+  const states = [...new Set(sel.map(l=>l.state))];
+  const pkgName = regions.length===1?regions[0]+' Portfolio':regions.length===2?regions.join(' & ')+' Portfolio':'Multi-Market Portfolio';
+  const totalAsk = sel.reduce((a,l)=>a+(l.askPrice||0),0);
+  const totalRev = sel.reduce((a,l)=>a+(l.ltmRev||0),0);
+  const totalEB  = sel.reduce((a,l)=>a+(l.ltmEBITDA||0),0);
+  const totalPF  = sel.reduce((a,l)=>a+(l.pfEBITDA||0),0);
+  const totalSuites = sel.reduce((a,l)=>a+(l.suites||0),0);
+  const occSel = sel.filter(l=>l.occ!==null);
+  const avgOcc = occSel.length ? occSel.reduce((a,l,_,arr)=>a+l.occ/arr.length,0) : null;
+  return { pkgName, states, regions, totalAsk, totalRev, totalEB, totalPF, totalSuites, avgOcc };
+}
+
+function openCimModal() {
+  const sel = locations.filter(l=>selected.has(l.id));
+  if(!sel.length) return;
+  const { pkgName, states, regions, totalAsk, totalRev, totalEB, totalPF, totalSuites, avgOcc } = buildPackageSummary(sel);
+  const hasTBD = sel.some(l=>!l.askPrice);
+  const askStr = totalAsk>0 ? '$'+(totalAsk/1000).toFixed(2)+'M'+(hasTBD?' + TBD':'') : 'TBD';
+
+  const locLines = sel.map(l => {
+    const parts = [
+      `Name: ${l.name}`,
+      `State: ${l.state}`,
+      `Region: ${l.region}`,
+      l.suites!=null?`Suites: ${l.suites}`:'Suites: TBD',
+      l.occ!=null?`Occupancy: ${Math.round(l.occ*100)}%`:'Occupancy: TBD',
+      l.ltmRev!=null?`LTM Revenue: $${l.ltmRev}K`:'LTM Revenue: TBD',
+      l.ltmEBITDA!=null?`LTM EBITDA: ${l.ltmEBITDA<0?'($'+Math.abs(l.ltmEBITDA)+'K)':'$'+l.ltmEBITDA+'K'}`:'LTM EBITDA: TBD',
+      l.pfEBITDA!=null?`P12 EBITDA: $${l.pfEBITDA}K`:'P12 EBITDA: TBD',
+      l.askPrice?`Asking Price (5.5x): $${l.askPrice}K`:'Asking Price: TBD',
+      l.sqft?`Sq Ft: ${l.sqft.toLocaleString()}`:'',
+      l.notes?`Notes: ${l.notes}`:''
+    ].filter(Boolean);
+    return parts.join(' | ');
+  }).join('\n');
+
+  const prompt = `Please create a Project Hedge Trimmer CIM (Confidential Information Memorandum) PowerPoint presentation (.pptx file) for the following package of Phenix Salon Suites corporate locations.
+
+PACKAGE: ${pkgName}
+DATE: ${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}
+CONFIDENTIALITY: Confidential — Project Hedge Trimmer
+
+PACKAGE SUMMARY:
+- Locations: ${sel.length}
+- Markets: ${regions.join(', ')}
+- States: ${states.join(', ')}
+- Total Suites: ${totalSuites}
+- Avg Occupancy: ${avgOcc!==null?Math.round(avgOcc*100)+'%':'TBD'}
+- LTM Revenue: ${totalRev>0?'$'+(totalRev/1000).toFixed(2)+'M':'TBD'}
+- LTM EBITDA: ${totalRev>0?'$'+(totalEB/1000).toFixed(2)+'M':'TBD'}
+- P12 EBITDA: ${totalPF>0?'$'+(totalPF/1000).toFixed(2)+'M':'TBD'}
+- Asking Price: ${askStr}
+- Valuation Method: 5.5x LTM P3 2026 EBITDA
+
+LOCATION DETAILS (one row per location):
+${locLines}
+
+SLIDE DECK REQUIREMENTS:
+- Brand colors: Navy Blue (#1B3A6B) and Gold (#C9A96E) — use these throughout
+- Professional CIM format suitable for presenting to franchise buyers
+- Include these slides:
+  1. Cover slide — "Project Hedge Trimmer | ${pkgName}" with date and CONFIDENTIAL watermark
+  2. Executive Summary — package highlights, asking price, key investment thesis
+  3. Portfolio Overview — summary table of all locations (name, state, suites, occ%, LTM EBITDA, ask price)
+  4. Market Map / Geography slide — bullet list of markets and location counts
+  5. Financial Summary — revenue, EBITDA, P12 EBITDA bar/table; note 5.5x valuation method
+  6. Location Detail slides — one slide per location (or group small markets); show suites, occ%, financials, and any notes
+  7. Why Phenix — brief brand overview, franchise model, suite-based format
+  8. Deal Terms — asking price, seller note potential, timing, contact info placeholder
+  9. Disclaimer / Confidentiality slide
+
+Use the Phenix Salon Suites name and branding throughout. Mark every slide CONFIDENTIAL in the footer.`;
+
+  document.getElementById('cimPromptText').value = prompt;
+  document.getElementById('cimModal').classList.add('open');
+}
+
+function closeCimModal() { document.getElementById('cimModal').classList.remove('open'); }
+
+function copyCimPrompt() {
+  const ta = document.getElementById('cimPromptText');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).catch(()=>{ document.execCommand('copy'); });
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = '✓ Copied!';
+  btn.style.background = '#27ae60';
+  setTimeout(()=>{ btn.textContent='Copy'; btn.style.background='var(--navy)'; }, 2000);
+}
+
+document.getElementById('cimModal').addEventListener('click',function(e){if(e.target===this)closeCimModal();});
+document.getElementById('exportModal').addEventListener('click',function(e){if(e.target===this)closeExport();});
+renderLocations(); renderSidebar();
+</script>
+</body>
+</html>
