@@ -221,7 +221,8 @@
   .drawer-kv-item .kv-label { font-size:9px; color:var(--mid-gr); font-weight:700; text-transform:uppercase; letter-spacing:1px; }
   .drawer-kv-item .kv-val { font-size:14px; font-weight:700; color:var(--navy); margin-top:2px; }
   .drawer-notes { background:#f7f8fa; border-left:3px solid var(--gold); border-radius:0 6px 6px 0; padding:10px 14px; font-size:12px; line-height:1.6; color:#333; margin-bottom:10px; }
-  .drawer-expansion { background:#fff9ee; border-left:3px solid var(--gold); border-radius:0 6px 6px 0; padding:10px 14px; font-size:12px; line-height:1.6; color:#333; }
+  .drawer-expansion { background:#FFF0C0; border-left:4px solid #E8A000; border-radius:0 6px 6px 0; padding:12px 14px; font-size:12px; line-height:1.6; color:#5a3000; font-weight:500; }
+  .card-exp-badge { display:inline-block; background:#E8A000; color:#fff; font-size:7px; font-weight:800; letter-spacing:1px; padding:2px 5px; border-radius:2px; margin-left:6px; vertical-align:middle; }
   .drawer-select-btn {
     width:100%; background:var(--navy); color:white; border:none; border-radius:6px;
     padding:11px 16px; font-size:13px; font-weight:700; cursor:pointer; margin-top:6px;
@@ -378,12 +379,12 @@ function buildCard(loc) {
   const awrHtml = loc.awr ? `<div class="card-awr">AWR <strong>$${loc.awr}</strong>/suite · ${loc.suites??'—'} suites · ${loc.sqft ? loc.sqft.toLocaleString()+' sqft' : '—'}</div>` : '';
   return `<div class="card ${cc} ${isSelected?'selected':''}" id="card-${loc.id}" onclick="toggleCard('${loc.id}')">
     <div class="card-check"></div>
-    <div class="card-location">${loc.name}</div>
+    <div class="card-location">${loc.name}${loc.expansionNotes ? '<span class="card-exp-badge">EXPANSION</span>' : ''}</div>
     <div class="card-state-badge">${loc.state}</div>
     <table class="trend-table">
       <thead><tr><th></th><th>Occ%</th><th>LTM Rev</th><th>EBITDA</th></tr></thead>
       <tbody>
-        <tr><td>Current</td><td>${fmtPct(loc.p3Occ)}</td><td>${loc.p3Rev!==null?'$'+Math.round(loc.p3Rev)+'K':'—'}</td><td>${fmtEB(loc.p3EBITDA)}</td></tr>
+        <tr><td>P6 Occ</td><td>${fmtPct(loc.p6Occ??loc.p3Occ)}</td><td>${loc.p3Rev!==null?'$'+Math.round(loc.p3Rev)+'K':'—'}</td><td>${fmtEB(loc.p3EBITDA)}</td></tr>
         <tr><td>P12</td><td>${fmtPct(loc.p12Occ)}</td><td>${loc.p12Rev!==null?'$'+Math.round(loc.p12Rev)+'K':'—'}</td><td>${fmtEB(loc.p12EBITDA)}</td></tr>
         <tr class="mature-row"><td>Mature</td><td>${fmtPct(loc.matureOcc)}</td><td>${loc.matureRev!==null?'$'+Math.round(loc.matureRev)+'K':'—'}</td><td>${fmtEB(loc.matureEB)}</td></tr>
       </tbody>
@@ -465,8 +466,8 @@ function renderSidebar() {
   const totalPF     = sel.reduce((a,l)=>a+(l.pfEBITDA||0),0);
   const totalAsk    = sel.reduce((a,l)=>a+(l.askPrice||0),0);
   const hasTBD      = sel.some(l=>!l.askPrice);
-  const occSel      = sel.filter(l=>l.occ!==null);
-  const avgOcc      = occSel.length ? occSel.reduce((a,l,_,arr)=>a+l.occ/arr.length,0) : null;
+  const occSel      = sel.filter(l=>(l.p6Occ??l.occ)!==null);
+  const avgOcc      = occSel.length ? occSel.reduce((a,l,_,arr)=>a+(l.p6Occ??l.occ)/arr.length,0) : null;
 
   document.getElementById('packageTotals').innerHTML = `
     <div class="pkg-row"><span class="pkg-row-label">Locations</span><span class="pkg-row-val">${sel.length}</span></div>
@@ -499,8 +500,8 @@ function openExport() {
   const totalPF     = sel.reduce((a,l)=>a+(l.pfEBITDA||0),0);
   const totalAsk    = sel.reduce((a,l)=>a+(l.askPrice||0),0);
   const hasTBD      = sel.some(l=>!l.askPrice);
-  const occSel      = sel.filter(l=>l.occ!==null);
-  const avgOcc      = occSel.length ? occSel.reduce((a,l,_,arr)=>a+l.occ/arr.length,0) : null;
+  const occSel      = sel.filter(l=>(l.p6Occ??l.occ)!==null);
+  const avgOcc      = occSel.length ? occSel.reduce((a,l,_,arr)=>a+(l.p6Occ??l.occ)/arr.length,0) : null;
   const margin      = totalRev>0?(totalEB/totalRev*100).toFixed(1):'—';
   document.getElementById('modalSubtitle').textContent =
     [...new Set(sel.map(l=>l.region))].join(' + ') + ' · LTM P3 2026 · Confidential';
@@ -529,7 +530,7 @@ function openExport() {
         ${sorted.map(l=>`<tr class="${l.region==='California'?'ca-row':l.region==='Arizona'?'az-row':l.region==='Texas'?'tx-row':l.region==='Carolinas'?'nc-row':''}">
           <td>${l.name}</td><td>${l.state}</td><td>${l.region}</td>
           <td class="num">${l.suites??'—'}</td>
-          <td class="num">${l.occ!==null?Math.round(l.occ*100)+'%':'—'}</td>
+          <td class="num">${(l.p6Occ??l.occ)!==null?Math.round((l.p6Occ??l.occ)*100)+'%':'—'}</td>
           <td class="num">${l.ltmRev!==null?'$'+l.ltmRev+'K':'—'}</td>
           <td class="num">${fmtK(l.ltmEBITDA)}</td>
           <td class="num">${l.pfEBITDA!==null?'$'+l.pfEBITDA+'K':'—'}</td>
@@ -563,7 +564,7 @@ function buildPackageSummary(sel) {
   const totalPF  = sel.reduce((a,l)=>a+(l.pfEBITDA||0),0);
   const totalSuites = sel.reduce((a,l)=>a+(l.suites||0),0);
   const occSel = sel.filter(l=>l.occ!==null);
-  const avgOcc = occSel.length ? occSel.reduce((a,l,_,arr)=>a+l.occ/arr.length,0) : null;
+  const avgOcc = occSel.length ? occSel.reduce((a,l,_,arr)=>a+(l.p6Occ??l.occ)/arr.length,0) : null;
   return { pkgName, states, regions, totalAsk, totalRev, totalEB, totalPF, totalSuites, avgOcc };
 }
 
@@ -758,13 +759,13 @@ function showDetail(locId, e) {
     </div>
 
     <!-- Notes -->
+    ${loc.expansionNotes ? `<div class="drawer-section">
+      <div class="drawer-section-title" style="color:#E8A000;">★ Expansion Context</div>
+      <div class="drawer-expansion">★ ${loc.expansionNotes}</div>
+    </div>` : ''}
     ${loc.fullNotes ? `<div class="drawer-section">
       <div class="drawer-section-title">Investment Notes</div>
       <div class="drawer-notes">${loc.fullNotes}</div>
-    </div>` : ''}
-    ${loc.expansionNotes ? `<div class="drawer-section">
-      <div class="drawer-section-title">Expansion Context</div>
-      <div class="drawer-expansion">🏗 ${loc.expansionNotes}</div>
     </div>` : ''}
 
     <!-- Action -->
